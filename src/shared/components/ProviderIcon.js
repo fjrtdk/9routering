@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import PropTypes from "prop-types";
 
-export default function ProviderIcon({
+// Wrapped in React.memo to prevent unnecessary re-renders in lists and tables where parent state changes but icon props remain static.
+const ProviderIcon = memo(function ProviderIcon({
   src,
   alt,
   size = 32,
@@ -39,7 +40,9 @@ export default function ProviderIcon({
       onError={() => setErrored(true)}
     />
   );
-}
+});
+
+export default ProviderIcon;
 
 ProviderIcon.propTypes = {
   src: PropTypes.string,
