@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import PropTypes from "prop-types";
 import {
   AreaChart,
@@ -22,7 +22,10 @@ const fmtTokens = (n) => {
 
 const fmtCost = (n) => `$${(n || 0).toFixed(4)}`;
 
-export default function UsageChart({ period = "7d" }) {
+// ⚡ Bolt Performance Optimization
+// Memoized to prevent expensive re-renders of the Recharts AreaChart
+// when the parent UsageStats component receives SSE updates.
+const UsageChart = memo(function UsageChart({ period = "7d" }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("tokens");
@@ -134,8 +137,10 @@ export default function UsageChart({ period = "7d" }) {
       )}
     </Card>
   );
-}
+});
 
 UsageChart.propTypes = {
   period: PropTypes.string,
 };
+
+export default UsageChart;
