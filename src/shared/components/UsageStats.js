@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FREE_PROVIDERS, AI_PROVIDERS } from "@/shared/constants/providers";
 
@@ -25,17 +25,45 @@ function timeAgo(timestamp) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+const timeAgoSubscribers = new Set();
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    timeAgoSubscribers.forEach(fn => fn());
+  }, 1000);
+}
+
+function useTimeAgoTick() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const fn = () => setTick(t => t + 1);
+    timeAgoSubscribers.add(fn);
+    return () => { timeAgoSubscribers.delete(fn); };
+  }, []);
+}
+
 // Auto-update time display every second without re-rendering parent
 function TimeAgo({ timestamp }) {
-  const [, setTick] = useState(0);
-  
-  useEffect(() => {
-    const timer = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(timer);
-  }, []);
-  
+  useTimeAgoTick();
   return <>{timeAgo(timestamp)}</>;
 }
+
+const RecentRequestRow = React.memo(function RecentRequestRow({ r }) {
+  const ok = !r.status || r.status === "ok" || r.status === "success";
+  return (
+    <tr className="hover:bg-bg-subtle transition-colors">
+      <td className="py-1.5">
+        <span className={`block w-1.5 h-1.5 rounded-full ${ok ? "bg-success" : "bg-error"}`} />
+      </td>
+      <td className="py-1.5 font-mono truncate max-w-[120px]" title={r.model}>{r.model}</td>
+      <td className="py-1.5 text-right whitespace-nowrap">
+        <span className="text-primary">{fmt(r.promptTokens)}↑</span>
+        {" "}
+        <span className="text-success">{fmt(r.completionTokens)}↓</span>
+      </td>
+      <td className="py-1.5 text-right text-text-muted whitespace-nowrap"><TimeAgo timestamp={r.timestamp} /></td>
+    </tr>
+  );
+});
 
 function RecentRequests({ requests = [] }) {
   return (
@@ -59,23 +87,9 @@ function RecentRequests({ requests = [] }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {requests.map((r, i) => {
-                const ok = !r.status || r.status === "ok" || r.status === "success";
-                return (
-                  <tr key={i} className="hover:bg-bg-subtle transition-colors">
-                    <td className="py-1.5">
-                      <span className={`block w-1.5 h-1.5 rounded-full ${ok ? "bg-success" : "bg-error"}`} />
-                    </td>
-                    <td className="py-1.5 font-mono truncate max-w-[120px]" title={r.model}>{r.model}</td>
-                    <td className="py-1.5 text-right whitespace-nowrap">
-                      <span className="text-primary">{fmt(r.promptTokens)}↑</span>
-                      {" "}
-                      <span className="text-success">{fmt(r.completionTokens)}↓</span>
-                    </td>
-                    <td className="py-1.5 text-right text-text-muted whitespace-nowrap"><TimeAgo timestamp={r.timestamp} /></td>
-                  </tr>
-                );
-              })}
+              {requests.map((r) => (
+                <RecentRequestRow key={`${r.timestamp}-${r.model}-${r.promptTokens}-${r.completionTokens}`} r={r} />
+              ))}
             </tbody>
           </table>
         </div>

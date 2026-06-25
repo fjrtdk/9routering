@@ -1,0 +1,3 @@
+## 2024-06-25 - Prevent N setIntervals and full re-renders in SSE components
+**Learning:** In real-time SSE components with lists of ticking items (like TimeAgo), creating a new `setInterval` for every item creates unnecessary CPU and memory overhead. Additionally, using array indices as keys in React lists causes the entire list to re-render when new items are prepended, ruining performance.
+**Action:** Use a pub-sub model with a single shared `setInterval` for all ticking UI components. Always use stable, unique data-derived keys instead of indices for arrays that add or remove items, and wrap the row components in `React.memo` to prevent re-renders of existing rows.
