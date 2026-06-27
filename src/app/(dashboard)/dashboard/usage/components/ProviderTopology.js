@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef, memo } from "react";
 import PropTypes from "prop-types";
 import {
   ReactFlow,
@@ -25,7 +25,7 @@ function getProviderImageUrl(providerId) {
 }
 
 // Custom provider node - rectangle with image + name
-function ProviderNode({ data }) {
+const ProviderNode = memo(function ProviderNode({ data }) {
   const { label, color, imageUrl, textIcon, active } = data;
   const [imgError, setImgError] = useState(false);
   return (
@@ -71,14 +71,14 @@ function ProviderNode({ data }) {
       )}
     </div>
   );
-}
+});
 
 ProviderNode.propTypes = {
   data: PropTypes.object.isRequired,
 };
 
 // Center 9Router node
-function RouterNode({ data }) {
+const RouterNode = memo(function RouterNode({ data }) {
   return (
     <div className="flex items-center justify-center px-5 py-3 rounded-xl border-2 border-primary bg-primary/5 shadow-md min-w-[130px]">
       <Handle type="source" position={Position.Top} id="top" className="!bg-transparent !border-0 !w-0 !h-0" />
@@ -95,7 +95,7 @@ function RouterNode({ data }) {
       )}
     </div>
   );
-}
+});
 
 RouterNode.propTypes = {
   data: PropTypes.object.isRequired,
