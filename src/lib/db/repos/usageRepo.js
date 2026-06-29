@@ -319,16 +319,12 @@ function loadDaysInRange(adapter, maxDays) {
 export async function getUsageStats(period = "all") {
   const db = await getAdapter();
 
-  const [{ getProviderConnections }, { getApiKeys }, { getProviderNodes }] = await Promise.all([
-    import("./connectionsRepo.js"),
+  const [{ getApiKeys }, { getProviderNodes }] = await Promise.all([
     import("./apiKeysRepo.js"),
     import("./nodesRepo.js"),
   ]);
 
-  let allConnections = [];
-  try { allConnections = await getProviderConnections(); } catch {}
-  const connectionMap = {};
-  for (const c of allConnections) connectionMap[c.id] = c.name || c.email || c.id;
+  const connectionMap = await getConnectionMapCached();
 
   const providerNodeNameMap = {};
   try {
@@ -342,15 +338,14 @@ export async function getUsageStats(period = "all") {
   for (const k of allApiKeys) apiKeyMap[k.key] = { name: k.name, id: k.id, createdAt: k.createdAt };
 
   // recentRequests from live history (last 100 entries enough for 20 deduped)
-  const recentRows = db.all(`SELECT timestamp, provider, model, tokens, status FROM usageHistory ORDER BY id DESC LIMIT 100`);
+  const recentRows = db.all(`SELECT timestamp, provider, model, promptTokens, completionTokens, status FROM usageHistory ORDER BY id DESC LIMIT 100`);
   const seen = new Set();
   const recentRequests = recentRows
     .map((r) => {
-      const t = parseJson(r.tokens, {}) || {};
       return {
         timestamp: r.timestamp, model: r.model, provider: r.provider || "",
-        promptTokens: t.prompt_tokens || t.input_tokens || 0,
-        completionTokens: t.completion_tokens || t.output_tokens || 0,
+        promptTokens: r.promptTokens || 0,
+        completionTokens: r.completionTokens || 0,
         status: r.status || "ok",
       };
     })
@@ -505,7 +500,7 @@ export async function getUsageStats(period = "all") {
     // Overlay precise lastUsed timestamps from history
     const overlayCutoff = maxDays ? Date.now() - maxDays * 86400000 : 0;
     const histRows = db.all(
-      `SELECT timestamp, provider, model, connectionId, apiKey, endpoint FROM usageHistory WHERE timestamp >= ?`,
+      `SELECT MAX(timestamp) as timestamp, provider, model, connectionId, apiKey, endpoint FROM usageHistory WHERE timestamp >= ? GROUP BY provider, model, connectionId, apiKey, endpoint`,
       [new Date(overlayCutoff).toISOString()]
     );
     for (const e of histRows) {
@@ -539,14 +534,13 @@ export async function getUsageStats(period = "all") {
       cutoff = new Date(Date.now() - PERIOD_MS["24h"]).toISOString();
     }
     const filtered = db.all(
-      `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost, tokens FROM usageHistory WHERE timestamp >= ?`,
+      `SELECT timestamp, provider, model, connectionId, apiKey, endpoint, promptTokens, completionTokens, cost FROM usageHistory WHERE timestamp >= ?`,
       [cutoff]
     );
 
     for (const r of filtered) {
-      const tokens = parseJson(r.tokens, {}) || {};
-      const promptTokens = tokens.prompt_tokens || 0;
-      const completionTokens = tokens.completion_tokens || 0;
+      const promptTokens = r.promptTokens || 0;
+      const completionTokens = r.completionTokens || 0;
       const entryCost = r.cost || 0;
       const providerDisplayName = providerNodeNameMap[r.provider] || r.provider;
 
