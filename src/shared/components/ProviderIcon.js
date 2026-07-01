@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import PropTypes from "prop-types";
 
-export default function ProviderIcon({
+const ProviderIcon = memo(function ProviderIcon({
   src,
   alt,
   size = 32,
@@ -39,7 +39,9 @@ export default function ProviderIcon({
       onError={() => setErrored(true)}
     />
   );
-}
+});
+
+export default ProviderIcon;
 
 ProviderIcon.propTypes = {
   src: PropTypes.string,

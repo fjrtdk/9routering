@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { cn } from "@/shared/utils/cn";
 
 const variants = {
@@ -17,7 +18,7 @@ const sizes = {
   lg: "px-3 py-1.5 text-sm",
 };
 
-export default function Badge({
+const Badge = memo(function Badge({
   children,
   variant = "default",
   size = "md",
@@ -51,4 +52,6 @@ export default function Badge({
       {children}
     </span>
   );
-}
+});
+
+export default Badge;
